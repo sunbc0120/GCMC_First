@@ -1,0 +1,485 @@
+latticeDisplay[boxSize_?NumberQ,numParticle_Integer]:=
+Block[{delta=boxSize/Ceiling@(numParticle^((1/3))),flag=1,position=ConstantArray[{0,0,0},numParticle]},
+	Do[
+		Do[
+			Do[{If[flag<=numParticle,position[[flag]]={xComponent,yComponent,zComponent}],flag++},{zComponent,delta/2,boxSize,delta}],
+		{yComponent,delta/2,boxSize,delta}],
+	{xComponent,delta/2,boxSize,delta}];
+	Graphics3D[{Specularity[White,30],Yellow,Sphere[position,delta/4]},PlotRange->{{0,boxSize},{0,boxSize},{0,boxSize}},ImageSize->300,Boxed->False]
+]
+latticeDisplay::usage="\!\(\*
+StyleBox[\"latticeDisplay\",\nFontSize->14,\nFontColor->RGBColor[0, 0, 1]]\)[ \!\(\*
+StyleBox[\"box_Size\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"particle_Number\",\nFontSize->14,\nFontSlant->\"Italic\"]\)]";
+
+latticeDisplace[boxSize_?NumberQ,numParticle_Integer]:=
+Block[{delta=boxSize/Ceiling@(numParticle^((1/3))),flag=1,position=ConstantArray[{0,0,0},numParticle]},
+	Do[
+		Do[
+			Do[{If[flag<=numParticle,position[[flag]]={xComponent,yComponent,zComponent}],flag++},{zComponent,delta/2.,boxSize,delta}],
+		{yComponent,delta/2.,boxSize,delta}],
+	{xComponent,delta/2.,boxSize,delta}];
+	Return[position];
+]
+latticeDisplace::usage="\!\(\*
+StyleBox[\"latticeDisplace\",\nFontSize->14,\nFontColor->RGBColor[0, 0, 1]]\)[ \!\(\*
+StyleBox[\"box_Size\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"particle_Number\",\nFontSize->14,\nFontSlant->\"Italic\"]\)]";
+
+ener[cutoffSquare_?NumberQ, distanceSquare_?NumberQ, \[Sigma]Square_?NumberQ, \[Epsilon]_?NumberQ, shift_]:=
+Block[{energy, vir},
+If[distanceSquare<cutoffSquare,
+{energy=4.\[Epsilon]((\[Sigma]Square/distanceSquare)^6-(\[Sigma]Square/distanceSquare)^3)-If[shift,4.\[Epsilon]((\[Sigma]Square/cutoffSquare)^6-(\[Sigma]Square/cutoffSquare)^3),0],vir=48.\[Epsilon]((\[Sigma]Square/distanceSquare)^6-.5(\[Sigma]Square/distanceSquare)^3)},
+{energy=0,vir=0}];
+Return[{energy, vir}]
+]
+ener::usage="\!\(\*
+StyleBox[\"energy\",\nFontSize->14,\nFontColor->RGBColor[0, 0, 1]]\)[ \!\(\*
+StyleBox[\"cut_Off\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*SuperscriptBox[
+StyleBox[\"_Distance\",\nFontSize->14,\nFontSlant->\"Italic\"], \(2\)]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*SuperscriptBox[
+StyleBox[\"particle_Distance\",\nFontSize->14,\nFontSlant->\"Italic\"], \(2\)]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[SuperscriptBox[\"\[Sigma]\", \"2\"],\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"\[Epsilon]\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"shift_True\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"_False\",\nFontSize->14,\nFontSlant->\"Italic\"]\)]";
+
+potential[posi_, particleID_Integer, startParticle_Integer:1, {boxSize_?NumberQ, cutoffSquare_?NumberQ, \[Sigma]Square_, \[Epsilon]_, shift_}]:=
+Block[{length=Range[startParticle, Length@posi],distanceSquare,(*{energy,vir}={0,0}*)energy=0, vir=0},
+	Do[
+		If[part!=particleID,
+			{distanceSquare=
+				If[Norm[posi[[particleID]]-posi[[part]]]^2>boxSize^2/4,
+				Norm[posi[[particleID]]-posi[[part]]/.dis_/;Abs@dis>boxSize/2->boxSize-Abs@dis]^2(*(boxSize-Norm[posi\[LeftDoubleBracket]particleNum\[RightDoubleBracket]-posi\[LeftDoubleBracket]part\[RightDoubleBracket]])^2*),
+				Norm[posi[[particleID]]-posi[[part]]]^2],
+				{energy,vir}+=ener[cutoffSquare, distanceSquare,\[Sigma]Square, \[Epsilon], shift]}],
+	{part, startParticle, Length@posi}];
+(*Scan[
+	If[#\[NotEqual]particleID,
+			{
+			distanceSquare=
+				If[Norm[posi\[LeftDoubleBracket]particleID\[RightDoubleBracket]-posi\[LeftDoubleBracket]#\[RightDoubleBracket]]^2>boxSize^2/4,
+				Norm[posi\[LeftDoubleBracket]particleID\[RightDoubleBracket]-posi\[LeftDoubleBracket]#\[RightDoubleBracket]/.dis_/;Abs@dis>boxSize/2\[Rule]boxSize-Abs@dis]^2,
+				Norm[posi\[LeftDoubleBracket]particleID\[RightDoubleBracket]-posi\[LeftDoubleBracket]#\[RightDoubleBracket]]^2],
+				{energy,vir}+=ener[cutoffSquare, distanceSquare,\[Sigma]Square, \[Epsilon], shift],
+			}
+	]&,
+	length
+];*)
+Return[{energy, vir}]
+];
+potential::usage="\!\(\*
+StyleBox[\"potential\",\nFontSize->14,\nFontColor->RGBColor[0, 0, 1]]\)[ \!\(\*
+StyleBox[\"particle_Positions\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"particle_ID\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"starting_particle\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"_ID\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"(\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"default\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"1\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\")\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"{\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"box_Size\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"cut_Off\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*SuperscriptBox[
+StyleBox[\"_Distance\",\nFontSize->14,\nFontSlant->\"Italic\"], \(2\)]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[SuperscriptBox[\"\[Sigma]\", \"2\"],\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"\[Epsilon]\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"shift_True\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"_False\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"}\",\nFontSize->14,\nFontSlant->\"Italic\"]\)]";
+
+tailPressure[{cutoffSquare_?NumberQ, \[Sigma]Square_, \[Epsilon]_}, \[Rho]_?NumberQ]:=
+Block[{\[Sigma]=Sqrt@\[Sigma]Square, rc=Sqrt@cutoffSquare, correctPressure},
+correctPressure=16/3*\[Pi]*\[Epsilon]*\[Rho]^2*\[Sigma]^3 (2/3 (\[Sigma]/rc)^9-(\[Sigma]/rc)^3);
+Return[correctPressure]
+]
+tailPressure::usage="\!\(\*
+StyleBox[\"tailPressure\",\nFontSize->14,\nFontColor->RGBColor[0, 0, 1]]\)[ \!\(\*
+StyleBox[\"{\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"cut_Off\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[SuperscriptBox[
+StyleBox[\"_Distance\",\nFontSize->14,\nFontSlant->\"Italic\"], \"2\"],\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[SuperscriptBox[\"\[Sigma]\", \"2\"],\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"\[Epsilon]\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"}\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"density\",\nFontSize->14,\nFontSlant->\"Italic\"]\)]";
+
+
+tailEnergy[{cutoffSquare_?NumberQ, \[Sigma]Square_, \[Epsilon]_}, \[Rho]_?NumberQ]:=
+Block[{\[Sigma]=Sqrt@\[Sigma]Square, rc=Sqrt@cutoffSquare, correctEnergy},
+correctEnergy=8/3*\[Pi]*\[Epsilon]*\[Rho]*\[Sigma]^3 (1/3 (\[Sigma]/rc)^9-(\[Sigma]/rc)^3);
+Return[correctEnergy]
+]
+tailEnergy::usage="\!\(\*
+StyleBox[\"tailEnergy\",\nFontSize->14,\nFontColor->RGBColor[0, 0, 1]]\)[ \!\(\*
+StyleBox[\"{\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"cut_Off\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[SuperscriptBox[
+StyleBox[\"_Distance\",\nFontSize->14,\nFontSlant->\"Italic\"], \"2\"],\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[SuperscriptBox[\"\[Sigma]\", \"2\"],\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"\[Epsilon]\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"}\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"density\",\nFontSize->14,\nFontSlant->\"Italic\"]\)]";
+
+totalEnergy[posi_,tailCor_,{boxSize_?NumberQ, cutoffSquare_?NumberQ, \[Sigma]Square_, \[Epsilon]_, shift_}]:=
+Block[{length=Length@posi, totalEnergy=0, totalVir=0, \[Rho]},
+
+	Do[
+		{totalEnergy, totalVir}+=potential[posi,particle,particle,{boxSize, cutoffSquare, \[Sigma]Square, \[Epsilon], shift}]
+		
+	,{particle, 1, length}];
+
+	If[tailCor, 
+		{\[Rho]=length/boxSize^3,
+		totalEnergy+=length*tailEnergy[{cutoffSquare,\[Sigma]Square, \[Epsilon]},\[Rho]]}
+	];
+
+	Return[{totalEnergy, totalVir}]
+]
+totalEnergy::usage="\!\(\*
+StyleBox[\"totalEnergy\",\nFontSize->14,\nFontColor->RGBColor[0, 0, 1]]\)[\!\(\*
+StyleBox[\"position_All\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"_Particles\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"tailCorrect_True\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"_False\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"{\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"box_Size\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"cut_Off\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[SuperscriptBox[\"_Distance\", \"2\"],\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[SuperscriptBox[\"\[Sigma]\", \"2\"],\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"\[Epsilon]\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"shift_True\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"_False\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"}\",\nFontSize->14,\nFontSlant->\"Italic\"]\)]";
+
+
+mcTranslate[posi_ , dr_, \[Beta]_,{boxSize_?NumberQ, cutoffSquare_?NumberQ, \[Sigma]Square_, \[Epsilon]_, shift_}]:=
+	Block[
+		{flag=RandomInteger[{1, Length@posi}], oldConf, oldPotential=0, oldVir=0, newPotential=0, newVir=0, config = posi, numAcc=0, potentialDiff=0, virDiff=0},
+		
+			{oldPotential, oldVir}=potential[config, flag, 1, {boxSize, cutoffSquare, \[Sigma]Square, \[Epsilon], shift}];
+			oldConf = config[[flag]];
+			config[[flag]] += dr*RandomReal[{-.5, .5},{3}];
+			config[[flag]]=config[[flag]]/.dis_/;dis>boxSize->dis-boxSize;
+			config[[flag]]=config[[flag]]/.dis_/;dis<0->boxSize+dis;
+			{newPotential, newVir}=potential[config, flag, 1, {boxSize, cutoffSquare, \[Sigma]Square, \[Epsilon], shift}];
+		If[
+			RandomReal[]<Exp[-\[Beta](newPotential-oldPotential)],
+			{++numAcc,potentialDiff+=(newPotential-oldPotential), virDiff+=(newVir-oldVir)},
+			{config[[flag]]=oldConf}
+		];
+		Return[{numAcc, potentialDiff, virDiff, config}];	
+]
+mcTranslate::usage="\!\(\*
+StyleBox[\"Monte_Carlo\",\nFontSize->14,\nFontColor->RGBColor[0, 0, 1]]\)\!\(\*
+StyleBox[\"_Movement\",\nFontSize->14,\nFontColor->RGBColor[0, 0, 1]]\)\!\(\*
+StyleBox[\"[\",\nFontSize->14]\)\!\(\*
+StyleBox[\"position_All\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"step\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"\[Beta]\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\) \!\(\*
+StyleBox[\"{\",\nFontSize->14]\)\!\(\*
+StyleBox[\"box_Size\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"cut_Off\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[SuperscriptBox[\"_Distance\", \"2\"],\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[SuperscriptBox[\"\[Sigma]\", \"2\"],\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"\[Epsilon]\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"shift_True\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"_False\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"}\",\nFontSize->14]\)]";
+
+monteCarlo[posi_, attemp_, stepSpace_, temp_, {boxSize_?NumberQ, cutoffSquare_?NumberQ, \[Sigma]Square_, \[Epsilon]_, shift_}]:=
+Block[{acceptNum=0, energyDif=0, virDif=0, configuration=posi, numAccept=0, difEnergy=0, difVir=0},
+(*Do[
+	{
+		{acceptNum, energyDif, virDif, configuration}=mcTranslate[configuration,stepSpace, 1/temp(*.5*), {boxSize, cutoffSquare, \[Sigma]Square, \[Epsilon], shift}],
+		numAccept+=acceptNum,
+		difEnergy+=energyDif,
+		difVir+=virDif
+		(*Print[{energy, vir, configuration}];*)
+},
+{attemp}];*)
+	Nest[
+	(
+		{acceptNum, energyDif, virDif, configuration}=mcTranslate[#, stepSpace, 1/temp, {boxSize, cutoffSquare, \[Sigma]Square, \[Epsilon], shift}];
+		numAccept+=acceptNum;
+		difEnergy+=energyDif;
+		difVir+=virDif;
+		configuration
+		(*Print[{energy, vir, configuration}];*)
+	)&,
+	configuration,
+	attemp
+	];
+
+Return[{numAccept/attemp//N, difEnergy, difVir, configuration}]
+]
+monteCarlo::usage="\!\(\*
+StyleBox[\"Monte\",\nFontSize->14,\nFontColor->RGBColor[0, 0, 1]]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontColor->RGBColor[0, 0, 1]]\)\!\(\*
+StyleBox[\"Carlo\",\nFontSize->14,\nFontColor->RGBColor[0, 0, 1]]\)\!\(\*
+StyleBox[\"[\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"position_All\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"trial_Attemps\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"step_Interval\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"{\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"boxSize\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"cut_off\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"_Square\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[SuperscriptBox[\"\[Sigma]\", \"2\"],\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"\[Epsilon]\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"shift_True\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"_False\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"}\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"]\",\nFontSize->14,\nFontSlant->\"Italic\"]\)";
+
+adjustStep[frac_, stepSpace_, targetFrac_:0.5, boxSize_]:=
+Block[{stepOrigin=stepSpace, stepNew},
+stepNew=stepSpace*frac/targetFrac;
+If[stepNew/stepOrigin>1.5,stepNew=1.5stepOrigin];
+If[stepNew/stepOrigin<.5,stepNew=.5stepOrigin];
+If[stepNew>.5boxSize,stepNew=.5boxSize];
+
+Return[stepNew];
+]
+adjustStep::usage="\!\(\*
+StyleBox[\"adjustStep\",\nFontSize->14,\nFontColor->RGBColor[0, 0, 1]]\)\!\(\*
+StyleBox[\"[\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"accept_Fraction\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"current_StepSpace\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"target_Fraction\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"box_Size\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"]\",\nFontSize->14,\nFontSlant->\"Italic\"]\)";
+
+propertyThermo[posi_, ener_, vir_, temperature_, {boxSize_, cutoffSquare_?NumberQ, \[Sigma]Square_, \[Epsilon]_}, tailCor_:True]:=
+Block[{averageEnergy=ener/Length@posi, volume=boxSize^3, density=Length@posi/boxSize^3, pressure},
+(*Print[boxSize,volume];*)
+pressure=Length@posi/volume*temperature+vir/(3*volume);
+(*Print[pressure,volume];*)
+If[tailCor,pressure+=tailPressure[{cutoffSquare, \[Sigma]Square, \[Epsilon]}, \[Rho]]];
+Return[{averageEnergy, pressure}];
+]
+propertyThermo::usage="\!\(\*
+StyleBox[\"propertyThermo\",\nFontSize->14,\nFontColor->RGBColor[0, 0, 1]]\)\!\(\*
+StyleBox[\"[\",\nFontSize->14]\)\!\(\*
+StyleBox[\"position_Config\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"energy\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"vir\",\nFontSize->14,\nFontSlant->\"Italic\"]\), \!\(\*
+StyleBox[\"{\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"box_Size\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"cut_Off\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[SuperscriptBox[
+StyleBox[\"_Distance\",\nFontSize->14,\nFontSlant->\"Italic\"], \"2\"],\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[SuperscriptBox[\"\[Sigma]\", \"2\"],\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"\[Epsilon]\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"}\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"tailCorrect_True\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"_False\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\",\",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\" \",\nFontSize->14,\nFontSlant->\"Italic\"]\)\!\(\*
+StyleBox[\"]\",\nFontSize->14]\)";
+
+Block[
+{
+\[Rho]=0.5,
+temper=0.9,
+numPart=100,
+numCyc=20,
+numAttempt=500,
+percentage=.4,
+targetAcc=.5,
+
+\[Sigma]=1,
+\[Epsilon]=1,
+shift=(*True*)False,
+tail=True,
+
+energyChang={},
+virChang={},
+presChang={},
+
+progressIndicator = 0,
+
+result
+},
+
+{
+\[Beta]=1/temper;
+boxSize=(numPart/\[Rho])^(1/3);
+stepSize=boxSize/100;
+cutoff=boxSize/2;
+position=latticeDisplace[boxSize,numPart];
+
+initEnergy=totalEnergy[position,tail,{boxSize, cutoff^2, \[Sigma]^2, \[Epsilon], shift}];
+Print[initEnergy];
+{averageEnergy, pres}=propertyThermo[config, energy, vir, temper, {boxSize, cutoff^2, \[Sigma]^2, \[Epsilon]}, tail];
+
+Monitor[
+
+	result=Nest[
+		(
+			{fraction, energyDiff, virDiff, config} = monteCarlo[#[[1]], numAttempt, #[[2]], temper, {boxSize, cutoff^2, \[Sigma]^2, \[Epsilon], shift}];
+			(*Print[{fraction, energyDiff, virDiff}];*)
+			AppendTo[energyChang, energyDiff];
+			AppendTo[virChang, virDiff];
+			stepSize=adjustStep[fraction, stepSize, targetAcc, boxSize];
+			{energy, vir}=totalEnergy[config,tail,{boxSize, cutoff^2, \[Sigma]^2, \[Epsilon], shift}];
+			{averageEnergy, pres}=propertyThermo[config, energy, vir, temper, {boxSize, cutoff^2, \[Sigma]^2, \[Epsilon]}, tail];
+			AppendTo[presChang, pres];
+			progressIndicator++;
+			{config, stepSize}
+		)&,
+	{position,stepSize},
+	numCyc],
+
+Grid@Partition[{
+	Dynamic[
+		Column[
+		{
+			ListPlot[
+				(initEnergy[[1]]+Accumulate@energyChang)/numPart,
+				Joined->True,
+				Frame->True,
+				PlotRange->Automatic,
+				ImageSize->300,
+				Axes->False,
+				FrameLabel->{"steps","average energy"},
+				PlotLabel->Last[initEnergy[[1]]+Accumulate@energyChang]/numPart
+			]
+			ListPlot[
+				presChang,
+				Joined->True,
+				Frame->True,
+				PlotRange->Automatic,
+				ImageSize->300,
+				Axes->False,
+				FrameLabel->{"steps","pressure"},
+				PlotLabel->Last[presChang]
+			]
+		}],
+		SynchronousUpdating->True,
+		TrackedSymbols:>{presChang}
+	],
+
+	Column[{
+	{fraction, stepSize}, 
+	{energyDiff, virDiff, energy},
+	ProgressIndicator[progressIndicator,{0,numCyc}]
+	}],
+
+	Graphics3D[
+		{
+			Blend[{Red,Blue},3/4],
+			PointSize[Large],
+			Dynamic[Point[config]]
+		},
+	PlotRange->{{0, boxSize}, {0, boxSize}, {0, boxSize}},
+	ImageSize->300,
+	FaceGrids->{{0,0,-1},{0,1,0},{-1,0,0}},
+	FaceGridsStyle->Directive[Blue,Dashed]
+	]
+	},3]
+];
+
+finalEnergy=totalEnergy[config,tail,{boxSize, cutoff^2, \[Sigma]^2, \[Epsilon], shift}];
+Print[finalEnergy];
+
+Print[{\[Rho],Mean[Take[presChang,-Round[0.4Length@presChang]]]}];
+Print[Mean[Take[(initEnergy[[1]]+Accumulate@energyChang)/numPart,-Round[0.4Length@(initEnergy[[1]]+Accumulate@energyChang)]]]]
+};
+]
